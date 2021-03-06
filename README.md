@@ -5,6 +5,7 @@ adds a few features and removes most others.
 
 Inspired by:
 
+- https://bellard.org/otcc
 - https://github.com/rswier/c4
 - https://github.com/rui314/chibicc
 
