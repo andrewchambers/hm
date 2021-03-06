@@ -3,12 +3,21 @@
 A prototype/wip/toy compiler for a tiny C like language that
 adds a few features and removes most others.
 
-Ideas:
+Inspired by:
 
-- Type inference.
-- Out of order definitions.
-- C like semantics.
-- Extreme simplicity until self hosting.
+- https://github.com/rswier/c4
+- https://github.com/rui314/chibicc
+
+Initial plan:
+
+- C like semantics (compile to C perhaps?).
+- Function local type inference.
+- Spartan simplicity.
+
+Future ideas:
+
+- Self hosting.
+- Owned pointers.
 
 ## Example code
 
