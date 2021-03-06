@@ -40,14 +40,8 @@
      :ident-or-kw (sequence :ws (cmt (sequence (position) (capture :ident-or-kw-text) (position)) ,make-ident-or-kw))
      :number (sequence :ws (cmt (sequence (position) (capture (some (range "09"))) (position)) ,make-number))
      :token (sequence :ws (choice
-                            :lbrack
-                            :rbrack
-                            :lparen
-                            :rparen
-                            :+
-                            :-
-                            :*
-                            :/
+                            :lbrack :rbrack :lparen :rparen
+                            :+ :- :* :/
                             :ident-or-kw
                             :number))
      :main (any :token)})
