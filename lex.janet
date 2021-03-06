@@ -1,6 +1,7 @@
-# A lexer based that uses janet peg.
+# A simple lexer that uses janet peg.
 #
-# We use the builtin janet peg for lexing as it is convenient in a prototype,
+# > (lex "1 + 1 let hello fn")
+# [{:text "1" :kind :number :span (0 1)} ...]
 
 (def- ops [
   "(" ")" "[" "]"
