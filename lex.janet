@@ -3,14 +3,10 @@
 # > (lex "1 + 1 let hello fn")
 # [{:text "1" :kind :number :span (0 1)} ...]
 
-(def- ops [
-  "(" ")" "[" "]"
-  "+" "-" "*" "/"
-])
+(def- ops ["(" ")" "[" "]"
+           "+" "-" "*" "/"])
 
-(def- keywords [
-  "fn" "let"
-])
+(def- keywords ["fn" "let"])
 
 (def- keyword-tab
   (let [t @{}]
@@ -36,27 +32,25 @@
    :text text
    :kind (keyword text)})
 
-
-(def grammar ~@{
-  :ws (any (set " \t\n"))
-  :ident-or-kw-start (choice (range "az") (range "AZ") "_")
-  :ident-or-kw-body (any (choice :ident-or-kw-start (range "09")))
-  :ident-or-kw-text (sequence :ident-or-kw-start (any :ident-or-kw-body))
-  :ident-or-kw (sequence :ws (cmt (sequence (position) (capture :ident-or-kw-text) (position)) ,make-ident-or-kw))
-  :number (sequence :ws (cmt (sequence (position) (capture (some (range "09"))) (position)) ,make-number))
-  :token (sequence :ws (choice 
-                         :lbrack
-                         :rbrack
-                         :lparen
-                         :rparen
-                         :+
-                         :-
-                         :*
-                         :/
-                         :ident-or-kw
-                         :number))
-  :main (any :token)
-})
+(def grammar
+  ~@{:ws (any (set " \t\n"))
+     :ident-or-kw-start (choice (range "az") (range "AZ") "_")
+     :ident-or-kw-body (any (choice :ident-or-kw-start (range "09")))
+     :ident-or-kw-text (sequence :ident-or-kw-start (any :ident-or-kw-body))
+     :ident-or-kw (sequence :ws (cmt (sequence (position) (capture :ident-or-kw-text) (position)) ,make-ident-or-kw))
+     :number (sequence :ws (cmt (sequence (position) (capture (some (range "09"))) (position)) ,make-number))
+     :token (sequence :ws (choice
+                            :lbrack
+                            :rbrack
+                            :lparen
+                            :rparen
+                            :+
+                            :-
+                            :*
+                            :/
+                            :ident-or-kw
+                            :number))
+     :main (any :token)})
 
 # Add human readable aliases
 (put grammar :lbrack (keyword "["))
@@ -64,7 +58,7 @@
 (put grammar :lparen (keyword "("))
 (put grammar :rparen (keyword ")"))
 
-# Fill in named rules for various operators.
+# Fill in named rules for operators.
 (each op ops
   (put grammar (keyword op) ~(cmt (sequence :ws (position) ,op (position)) ,(fn make-op [start end] {:span [start end] :text op :kind (keyword op)}))))
 
