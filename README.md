@@ -17,7 +17,7 @@ Initial plan:
 Future ideas:
 
 - Self hosting.
-- Owned pointers.
+- Owned values.
 
 ## Example code
 
