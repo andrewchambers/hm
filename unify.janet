@@ -1,3 +1,16 @@
+# A unification engine for use with the compiler.
+#
+# One quirk is all solutions are wrapped in a tuple 
+# so that we can unify with nil and present that solution
+# in a table (tables don't allow nil values).
+#
+# > (unify '?x '[1 2 3])
+# {?x ([1 2 3])}
+# > (unify '{:x ?y} '{:x 123})
+# {?y (123)|
+# > (unify '[?x 2] '[3 ?y])
+# {?x (3) ?y (2)}
+
 # Original reference:
 # https://eli.thegreenplace.net/2018/unification/ 
 
