@@ -1,8 +1,6 @@
 # A lexer based that uses janet peg.
 #
-# We don't use the peg for parsing as recursive
-# descent parsing gives us more fine control, but
-# using janet peg for lexing is convenient in a prototype.
+# We use the builtin janet peg for lexing as it is convenient in a prototype,
 
 (def- ops [
   "(" ")" "[" "]"
@@ -38,7 +36,7 @@
    :kind (keyword text)})
 
 
-(def- grammar ~@{
+(def grammar ~@{
   :ws (any (set " \t\n"))
   :ident-or-kw-start (choice (range "az") (range "AZ") "_")
   :ident-or-kw-body (any (choice :ident-or-kw-start (range "09")))
@@ -69,7 +67,9 @@
 (each op ops
   (put grammar (keyword op) ~(cmt (sequence :ws (position) ,op (position)) ,(fn make-op [start end] {:span [start end] :text op :kind (keyword op)}))))
 
-(def- lexer (peg/compile (freeze grammar)))
+(def grammar (freeze grammar))
+
+(def- lexer (peg/compile grammar))
 
 (defn lex [source]
   (peg/match lexer source))
