@@ -23,7 +23,7 @@
     (do
       (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  {:kind :ptr :sub-type (node :type)}])
       (type-equations (node :expr) eqns))
-    (index-of (node :kind) [:let :tassert])
+    (index-of (node :kind) [:let :tassert :->])
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :type)])
       (type-equations (node :expr) eqns)))
@@ -102,7 +102,7 @@
     (each s statements
       (validate-types s))))
 
-(defn type-check-ast
+(defn type-check
   [node]
   (def eqns (tracev (type-equations node)))
   (def solved-types (tracev (solve-type-equations eqns)))
@@ -110,26 +110,34 @@
   (validate-types node)
   node)
 
-(def ast1
-  @{:kind :block
-    :stmts
-    [@{:kind :let
-       :ident "i"
-       :type '?t0
-       :expr @{:kind :tassert
-              :expr @{:kind :number
-                      :value "0"
-                      :type '?t1}
-              :type :int}}
-      
-      @{:kind :deref
-        :type '?t3
-        :expr
-        @{:kind :address-of
-          :type '?t2
-          :expr @{:kind :ident
-                  :type '?t0
-                  :ident "i"}}}]})
+(defn type-check-top-levels
+  [top-levels]
+  (each tl top-levels
+    (case (tl :kind)
+      :fn
+        (type-check (tl :expr))
+      (error "unhandled top level"))))
 
+(comment
+  (def ast1
+    @{:kind :block
+      :stmts
+      [@{:kind :let
+         :ident "i"
+         :type '?t0
+         :expr @{:kind :tassert
+                :expr @{:kind :number
+                        :value "0"
+                        :type '?t1}
+                :type :int}}
+        
+        @{:kind :deref
+          :type '?t3
+          :expr
+          @{:kind :address-of
+            :type '?t2
+            :expr @{:kind :ident
+                    :type '?t0
+                    :ident "i"}}}]}))
 
-(printf "%.20M" (type-check-ast ast1))
+# (printf "%.20M" (type-check-ast ast1))

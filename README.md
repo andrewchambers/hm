@@ -19,6 +19,7 @@ Future ideas:
 
 - Self hosting.
 - Owned values.
+- C compatible generics.
 
 ## Example code
 
@@ -33,3 +34,6 @@ fn main (argc: int, argv: **char) -> int {
 }
 
 ```
+
+
+## C compatible generics
