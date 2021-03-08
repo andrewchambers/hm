@@ -119,7 +119,7 @@
       :fn
         (when (tl :expr)
           (type-check (tl :expr)))
-      (error "unhandled top level"))))
+      (errorf "unhandled top level %p" tl))))
 
 (comment
   (def ast1

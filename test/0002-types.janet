@@ -8,6 +8,10 @@ type baz = struct {};
 type bang = struct {
   foo : int;
   bar : *int;
-  baz : struct {};
+  baz : struct {
+  	x : char;
+  };
   pself : *bang;
 };
+
+type f = fn () -> void;
