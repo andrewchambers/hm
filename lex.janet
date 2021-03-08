@@ -10,7 +10,7 @@
    "+" "-" "*" "/"
    ":" ";" ","])
 
-(def- keywords ["fn" "let" "type" "struct"])
+(def- keywords ["fn" "let" "type" "struct" "if" "else" "while" "true" "false"])
 
 (def- keyword-tab
   (let [t @{}]

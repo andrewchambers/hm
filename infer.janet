@@ -8,13 +8,33 @@
 
 (defn type-equations
   [node &opt eqns]
-  (tracev node)
-  (tracev eqns)
   (default eqns @[])
   (cond
+    (= (node :kind) :let)
+    (when-let [expr (node :expr)]
+      (array/push eqns [(node :var-type) (expr :type)])
+      (type-equations expr eqns))
+    (= (node :kind) :while)
+    (do
+      (array/push eqns [(get-in node [:expr :type]) "bool"])
+      (type-equations (node :body) eqns))
+    (= (node :kind) :if)
+    (let [if-true (node :if-true)]
+      (array/push eqns [(get-in node [:expr :type]) "bool"])
+      (type-equations if-true eqns)
+      (if-let [if-false (node :if-false)]
+        (do
+          (array/push eqns [(node :type) (if-true :type)])
+          (array/push eqns [(node :type) (if-false :type)])
+          (type-equations if-false eqns))
+        (array/push eqns [(node :type) "void"])))
     (= (node :kind) :block)
-    (each stmt (node :stmts)
+    (each stmt (node :exprs)
       (type-equations stmt eqns))
+    (= (node :kind) :->)
+    (do
+      (array/push eqns [(get-in node [:expr :type]) (node :return-type)])
+      (type-equations (node :expr) eqns))
     (= (node :kind) :address-of)
     (do
       (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  (node :type)])
@@ -23,7 +43,7 @@
     (do
       (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  {:kind :ptr :sub-type (node :type)}])
       (type-equations (node :expr) eqns))
-    (index-of (node :kind) [:let :tassert :->])
+    (= (node :kind) :tassert)
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :type)])
       (type-equations (node :expr) eqns)))
@@ -60,7 +80,7 @@
   [t]
   (cond
     (symbol? t) false
-    (keyword? t) true
+    (string? t) true
     :default
     (if-let [sub-ty (get t :sub-type)]
       (concrete-type? sub-ty)
@@ -68,46 +88,55 @@
 
 (defn numeric-type?
   [t]
-  (truthy? (index-of t [:int])))
+  (case t
+    "char" true
+    "int" true
+    false))
 
 (defn apply-types
   [solved-types node]
   (tracev node)
-  (when-let [t (node :type)]
-    (def new-t (prewalk |(get solved-types $ $) t))
-    (tracev [t new-t])
-    (put node :type new-t))
+  (each k [:type :return-type :var-type]
+    (when-let [t (node k)]
+      (def new-t (prewalk |(get solved-types $ $) t))
+      (put node k new-t)))
   (when-let [sub-expr (node :expr)]
     (apply-types solved-types sub-expr))
-  (when-let [statements (node :stmts)]
+  (when-let [body (node :body)]
+    (apply-types solved-types body))
+  (when-let [statements (node :exprs)]
     (each s statements
       (apply-types solved-types s))))
 
-(defn validate-types
+(defn validate-expr-types
   [node]
   (tracev node)
-  
-  (when-let [t (node :type)]
-    (unless (concrete-type? t)
-      (errorf "type %p not constrained" t))
 
-    (when (= (node :kind) :number)
-      (unless (numeric-type? t)
-        (errorf "number resolved to non numeric type - %p" t))))
+  (each k [:var-type :type]
+    (when-let [t (node k)]
+      (unless (concrete-type? t)
+        (errorf "type %p not constrained" t))))
+
+  (when (= (node :kind) :number)
+    (unless (numeric-type? (node :type))
+      (errorf "number resolved to non numeric type - %p" (node :type))))
   
   (when-let [sub-expr (node :expr)]
-    (validate-types sub-expr))
+    (validate-expr-types sub-expr))
 
-  (when-let [statements (node :stmts)]
-    (each s statements
-      (validate-types s))))
+  (when-let [body-expr (node :body)]
+    (validate-expr-types body-expr))
 
-(defn type-check
+  (when-let [exprs (node :exprs)]
+    (each e exprs
+      (validate-expr-types e))))
+
+(defn type-check-expr
   [node]
   (def eqns (tracev (type-equations node)))
   (def solved-types (tracev (solve-type-equations eqns)))
   (apply-types solved-types node)
-  (validate-types node)
+  (validate-expr-types node)
   node)
 
 (defn type-check-top-levels
@@ -117,30 +146,6 @@
       :typedef
         nil
       :fn
-        (when (tl :expr)
-          (type-check (tl :expr)))
+        (when-let [expr (tl :expr)]
+          (type-check-expr expr))
       (errorf "unhandled top level %p" tl))))
-
-(comment
-  (def ast1
-    @{:kind :block
-      :stmts
-      [@{:kind :let
-         :ident "i"
-         :type '?t0
-         :expr @{:kind :tassert
-                :expr @{:kind :number
-                        :value "0"
-                        :type '?t1}
-                :type :int}}
-        
-        @{:kind :deref
-          :type '?t3
-          :expr
-          @{:kind :address-of
-            :type '?t2
-            :expr @{:kind :ident
-                    :type '?t0
-                    :ident "i"}}}]}))
-
-# (printf "%.20M" (type-check-ast ast1))
