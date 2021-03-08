@@ -114,8 +114,11 @@
   [top-levels]
   (each tl top-levels
     (case (tl :kind)
+      :typedef
+        nil
       :fn
-        (type-check (tl :expr))
+        (when (tl :expr)
+          (type-check (tl :expr)))
       (error "unhandled top level"))))
 
 (comment

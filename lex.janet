@@ -6,9 +6,11 @@
 (def- ops 
   ["(" ")" "[" "]" "{" "}"
    "->"
-   "+" "-" "*" "/"])
+   "="
+   "+" "-" "*" "/"
+   ":" ";" ","])
 
-(def- keywords ["fn" "let" "char" "int" "void"])
+(def- keywords ["fn" "let" "type" "struct"])
 
 (def- keyword-tab
   (let [t @{}]
@@ -47,10 +49,15 @@
                             :lparen :rparen
                             :lbrace :rbrace
                             :->
-                            :+ :- :* :/
+                            :+ :- :* :/ :=
+                            :colon :semicolon :comma
                             :ident-or-kw
                             :number))
-     :main (any :token)})
+     :main (any (sequence :ws 
+                  (choice 
+                    :token
+                    (not 1)
+                    (error))))})
 
 # Add human readable aliases
 (def op-remaps {
@@ -60,6 +67,9 @@
   "}" :rbrace
   "(" :lparen
   ")" :rparen
+  ":" :colon
+  ";" :semicolon
+  "," :comma
 })
 
 (each [o r] (pairs op-remaps)
