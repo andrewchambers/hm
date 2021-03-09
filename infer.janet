@@ -17,11 +17,13 @@
     (= (node :kind) :while)
     (do
       (array/push eqns [(get-in node [:expr :type]) "bool"])
+      (type-equations (node :expr) eqns)
       (type-equations (node :body) eqns))
     (= (node :kind) :if)
     (let [if-true (node :if-true)]
-      (array/push eqns [(get-in node [:expr :type]) "bool"])
+      (type-equations (node :expr) eqns)
       (type-equations if-true eqns)
+      (array/push eqns [(get-in node [:expr :type]) "bool"])
       (if-let [if-false (node :if-false)]
         (do
           (array/push eqns [(node :type) (if-true :type)])
@@ -43,10 +45,25 @@
     (do
       (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  {:kind :ptr :sub-type (node :type)}])
       (type-equations (node :expr) eqns))
-    (= (node :kind) :tassert)
+    (= (node :kind) :type-assert)
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :type)])
-      (type-equations (node :expr) eqns)))
+      (type-equations (node :expr) eqns))
+    (= (node :kind) :call)
+    (do
+      (array/push eqns [{:kind :fn
+                         :return-type (node :type)
+                         :param-types (tuple ;(map |(get $ :type) (node :params)))}
+                        (get-in node [:expr :type])])
+      (type-equations (node :expr) eqns)
+      (each p (node :params)
+        (type-equations p eqns)))
+    (= (node :kind) :binop)
+    (do
+      (array/push eqns [(get-in node [:left-expr :type]) (node :type)])
+      (array/push eqns [(get-in node [:right-expr :type]) (node :type)])
+      (type-equations (node :left-expr) eqns)
+      (type-equations (node :right-expr) eqns)))
   eqns)
 
 (defn solve-type-equations
@@ -78,12 +95,17 @@
 
 (defn concrete-type?
   [t]
+  (tracev t)
   (cond
     (symbol? t) false
     (string? t) true
     :default
-    (if-let [sub-ty (get t :sub-type)]
-      (concrete-type? sub-ty)
+    (case (get t :kind)
+      :ptr
+      (concrete-type? (t :sub-ty))
+      :fn
+      (and (concrete-type? (t :return-type))
+           (all concrete-type? (t :param-types)))
       (error "unhandled type case"))))
 
 (defn numeric-type?
@@ -96,40 +118,41 @@
 (defn apply-types
   [solved-types node]
   (tracev node)
+  
   (each k [:type :return-type :var-type]
     (when-let [t (node k)]
       (def new-t (prewalk |(get solved-types $ $) t))
       (put node k new-t)))
-  (when-let [sub-expr (node :expr)]
-    (apply-types solved-types sub-expr))
-  (when-let [body (node :body)]
-    (apply-types solved-types body))
-  (when-let [statements (node :exprs)]
-    (each s statements
-      (apply-types solved-types s))))
+
+  (each k [:expr :body :if-true :if-false :left-expr :right-expr]
+    (when-let [sub-expr (node k)]
+      (apply-types solved-types sub-expr)))
+
+  (each k [:exprs :params]
+    (when-let [exprs (node k)]
+      (each e exprs
+        (apply-types solved-types e)))))
 
 (defn validate-expr-types
   [node]
-  (tracev node)
-
-  (each k [:var-type :type]
-    (when-let [t (node k)]
-      (unless (concrete-type? t)
-        (errorf "type %p not constrained" t))))
+  (unless (get node :no-return)
+    (each k [:var-type :type]
+      (when-let [t (node k)]
+        (unless (concrete-type? t)
+          (errorf "type %p not constrained" t)))))
 
   (when (= (node :kind) :number)
     (unless (numeric-type? (node :type))
       (errorf "number resolved to non numeric type - %p" (node :type))))
   
-  (when-let [sub-expr (node :expr)]
-    (validate-expr-types sub-expr))
+  (each k [:expr :body :if-true :if-false :left-expr :right-expr]
+    (when-let [sub-expr (node k)]
+      (validate-expr-types sub-expr)))
 
-  (when-let [body-expr (node :body)]
-    (validate-expr-types body-expr))
-
-  (when-let [exprs (node :exprs)]
-    (each e exprs
-      (validate-expr-types e))))
+  (each k [:exprs :params]
+    (when-let [exprs (node k)]
+      (each e exprs
+        (validate-expr-types e)))))
 
 (defn type-check-expr
   [node]

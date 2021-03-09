@@ -1,6 +1,7 @@
 (import ./lex)
 (import ./parse)
 (import ./infer)
+(import ./emitc)
 
 (defn main
   [&]
@@ -8,8 +9,10 @@
   (tracev src)
   (def tokens (lex/lex src))
   (tracev tokens)
-  (def top-levels (parse/parse tokens))
-  (tracev top-levels)
-  (infer/type-check-top-levels top-levels)
-  (tracev top-levels)
+  (def parsed (parse/parse tokens))
+  (infer/type-check-top-levels (parsed :top-levels))
+  (emitc/emit-types (parsed :type-tab))
+  (emitc/emit-decls (parsed :global-scope))
+  (emitc/emit-fns (filter |(and (= ($ :kind) :fn) ($ :expr) )
+                          (parsed :top-levels)))
   nil)

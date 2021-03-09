@@ -1,3 +1,9 @@
-fn main (x : int) -> int {
-	x
+
+fn do_thing(i: int) -> int {
+	i - 1
+}
+
+fn main () -> int {
+	let x = do_thing(1);
+	-> x
 }

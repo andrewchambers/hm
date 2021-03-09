@@ -70,7 +70,7 @@
   (expect :struct)
   (expect :lbrace)
   (while (not= ((peek) :kind) :rbrace)
-    (def name (expect :ident))
+    (def name ((expect :ident) :text))
     (expect :colon)
     (def subt (parse-type))
     (expect :semicolon)
@@ -134,7 +134,7 @@
   (def param-names @[])
   (def param-types @[])
   (expect :fn)
-  (def nametok (expect :ident))
+  (def name-tok (expect :ident))
   (expect :lparen)
   (while (not= ((peek) :kind) :rparen)
     (def param-name ((expect :ident) :text))
@@ -151,7 +151,7 @@
   (def return-type (parse-type))
 
   (def f 
-    @{:name (nametok :text)
+    @{:name (name-tok :text)
       :kind :fn
       :type {:kind :fn
              :param-types (tuple ;param-types)
@@ -250,7 +250,8 @@
     :name name
     :expr expr
     :var-type t
-    :type "void"})
+    :type "void"
+    :no-return (get expr :no-return false)})
 
 (defn parse-while
   []
@@ -260,7 +261,8 @@
   @{:kind :while
     :expr expr
     :body body
-    :type "void"})
+    :type "void"
+    :no-return false})
 
 (defn parse-if
   []
@@ -275,45 +277,99 @@
     :expr expr
     :if-true if-true
     :if-false if-false
-    :type (fresh-type-var)})
+    :type (fresh-type-var)
+    :no-return (and (get if-true :no-return)
+                    (get if-false :no-return))})
 
 (defn parse-true-false
   []
   @{:kind :bool
     :type "bool"
-    :value (= :true ((next) :kind))})
+    :value (= :true ((next) :kind))
+    :no-return false})
+
+(defn parse-expr-base
+  []
+  (def tok (peek))
+  (var expr 
+    (case (tok :kind)
+      :if
+      (parse-if)
+      :while
+      (parse-while)
+      :lbrace
+      (parse-block)
+      :lparen
+      (do
+        (next)
+        (parse-expr)
+        (expect :rparen))
+      :number
+      (do 
+        (next)
+        @{:kind :number
+          :value (tok :text)
+          :type (fresh-type-var)
+          :no-return false})
+      :ident
+      (let [v (lookup ((next) :text))] 
+        @{:kind :ident
+          :name (v :name)
+          :type (v :type)
+          :no-return false})
+      :true
+      (parse-true-false)
+      :false
+      (parse-true-false)
+      (errorf "expected expression, got %p" tok)))
+  (while true
+    (def next-kind ((peek) :kind))
+    (cond
+      (= next-kind :lparen)
+      (do
+        (next)
+        (def params @[])
+        (while (not= ((peek) :kind) :rparen)
+          (when (not (empty? params))
+            (expect :comma))
+          (array/push params (parse-expr)))
+        (expect :rparen)
+        (set expr
+          @{:kind :call
+            :expr expr
+            :type (fresh-type-var)
+            :params params
+            :no-return false}))
+      (= next-kind :colon)
+      (do
+        (next) 
+        (set expr
+          @{:kind :type-assert
+            :type (parse-type) 
+            :expr expr
+            :no-return (expr :no-return)}))
+      (break)))
+  expr)
 
 (varfn parse-expr
   []
-  (def tok (peek))
-  (case (tok :kind)
-    :if
-    (parse-if)
-    :while
-    (parse-while)
-    :lbrace
-    (parse-block)
-    :lparen
-    (do
-      (next)
-      (parse-expr)
-      (expect :rparen))
-    :number
-    (do 
-      (next)
-      @{:kind :number
-        :value (tok :text)
-        :type (fresh-type-var)})
-    :ident
-    (let [v (lookup ((next) :text))] 
-      @{:kind :ident
-        :name (v :name)
-        :type (v :type)})
-    :true
-    (parse-true-false)
-    :false
-    (parse-true-false)
-    (errorf "expected expression, got %p" tok)))
+  (var l (parse-expr-base))
+  (while true
+    (def next-kind ((peek) :kind))
+    (cond
+      (index-of next-kind [:+ :- :* :/])
+      (do
+        (next)
+        (def r (parse-expr-base))
+        (set l
+          @{:kind :binop
+            :op next-kind
+            :type (fresh-type-var)
+            :left-expr l
+            :right-expr r
+            :no-return (or (l :no-return) (r :no-return))}))
+      (break)))
+  (tracev l))
 
 (varfn parse-block
   []
@@ -332,6 +388,7 @@
           @{:kind :->
             :type (fresh-type-var)
             :return-type (get-in *cur-fn* [:type :return-type])
+            :no-return true
             :expr (parse-expr)})
         :let
         (parse-let)
@@ -359,10 +416,12 @@
   (def use-last (and (not prev-had-semi)
                      (not (empty? exprs))))
   (def block-type (if use-last ((last exprs) :type) "void"))
+  (def no-return (all identity (map |(get $ :no-return) exprs)))
   @{:kind :block
     :exprs exprs
     :use-last use-last
-    :type block-type})
+    :type block-type
+    :no-return no-return})
 
 (defn parse-fn-body
   []
@@ -373,13 +432,11 @@
     (declare param-name param-type))
   (def body (parse-block))
   (pop-scope)
-  (if (= (get (last body) :kind) :->)
-    (do
-      # this would not have a type constraint otherwise.
-      (put body :type "void")
-      body)
+  (if (body :no-return)
+      body
     @{:kind :->
-      :type "void"
+      :type (fresh-type-var)
+      :no-return true
       :return-type (get-in *cur-fn* [:type :return-type])
       :expr body}))
 
@@ -388,7 +445,7 @@
   (set *type-var-counter* 0)
   (set *global-scope* @{})
   (set *scopes* @[*global-scope*])
-  (set *type-tab* (merge @{} types/primitives))
+  (set *type-tab* (merge @{} types/builtins))
   (set *tokens* (reverse tokens))
   (set *eof-error* "end of file")
   (def top-levels (parse-top-levels))
@@ -400,5 +457,7 @@
     (put f :body-tokens nil)
     (set *eof-error* "end of function")
     (put f :expr (parse-fn-body)))
-  (printf "XXX\n%.20m\n" top-levels)
-  top-levels)
+
+  {:top-levels top-levels
+   :type-tab *type-tab*
+   :global-scope *global-scope*})
