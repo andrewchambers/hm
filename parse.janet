@@ -292,7 +292,7 @@
   []
   (def tok (peek))
   (var expr 
-    (case (tok :kind)
+    (case (tok :kind) 
       :if
       (parse-if)
       :while
@@ -304,6 +304,29 @@
         (next)
         (parse-expr)
         (expect :rparen))
+      :*
+      (do 
+        (next)
+        (def expr (parse-expr-base))
+        @{:kind :*
+          :expr expr
+          :type (fresh-type-var)
+          :no-return (expr :no-return)})  
+      :&
+      (do 
+        (next)
+        (def expr (parse-expr-base))
+        @{:kind :&
+          :expr expr
+          :type (fresh-type-var)
+          :no-return (expr :no-return)})  
+      :string-literal
+      (do 
+        (next)
+        @{:kind :string-literal
+          :value (tok :text)
+          :type (fresh-type-var)
+          :no-return false})
       :number
       (do 
         (next)
@@ -369,7 +392,7 @@
             :right-expr r
             :no-return (or (l :no-return) (r :no-return))}))
       (break)))
-  (tracev l))
+  l)
 
 (varfn parse-block
   []
@@ -416,7 +439,7 @@
   (def use-last (and (not prev-had-semi)
                      (not (empty? exprs))))
   (def block-type (if use-last ((last exprs) :type) "void"))
-  (def no-return (all identity (map |(get $ :no-return) exprs)))
+  (def no-return (any? (map |(get $ :no-return) exprs)))
   @{:kind :block
     :exprs exprs
     :use-last use-last

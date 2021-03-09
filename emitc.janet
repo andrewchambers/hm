@@ -75,7 +75,23 @@
       (prin "})"))
     :ident
     (prin (e :name))
+    :&
+    (do
+      (prin "&")
+      (emit-expr (e :expr)))
+    :*
+    (do
+      (prin "*")
+      (emit-expr (e :expr)))
     :number
+    (do
+      (prin "(")
+      (prin "(")
+      (emit-type (e :type))
+      (prin ")")
+      (prin (e :value))
+      (prin ")"))
+    :string-literal
     (do
       (prin "(")
       (prin "(")

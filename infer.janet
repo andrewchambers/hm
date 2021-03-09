@@ -37,13 +37,13 @@
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :return-type)])
       (type-equations (node :expr) eqns))
-    (= (node :kind) :address-of)
+    (= (node :kind) :&)
     (do
       (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  (node :type)])
       (type-equations (node :expr) eqns))
-    (= (node :kind) :deref)
+    (= (node :kind) :*)
     (do
-      (array/push eqns [{:kind :ptr :sub-type (get-in node [:expr :type])}  {:kind :ptr :sub-type (node :type)}])
+      (array/push eqns [(get-in node [:expr :type])  {:kind :ptr :sub-type (node :type)}])
       (type-equations (node :expr) eqns))
     (= (node :kind) :type-assert)
     (do
@@ -102,7 +102,7 @@
     :default
     (case (get t :kind)
       :ptr
-      (concrete-type? (t :sub-ty))
+      (concrete-type? (t :sub-type))
       :fn
       (and (concrete-type? (t :return-type))
            (all concrete-type? (t :param-types)))

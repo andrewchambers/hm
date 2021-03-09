@@ -8,7 +8,8 @@
    "->"
    "="
    "+" "-" "*" "/"
-   ":" ";" ","])
+   ":" ";" ","
+   "&"])
 
 (def- keywords ["fn" "let" "type" "struct" "if" "else" "while" "true" "false"])
 
@@ -30,6 +31,12 @@
    :text text
    :kind :number})
 
+(defn- make-string-literal
+  [start text end]
+  {:span [start end]
+   :text text
+   :kind :string-literal})
+
 (defn- make-op
   [start text end]
   {:span [start end]
@@ -43,16 +50,21 @@
      :ident-or-kw-body (any (choice :ident-or-kw-start (range "09")))
      :ident-or-kw-text (sequence :ident-or-kw-start (any :ident-or-kw-body))
      :ident-or-kw (sequence :ws (cmt (sequence (position) (capture :ident-or-kw-text) (position)) ,make-ident-or-kw))
-     :number (sequence :ws (cmt (sequence (position) (capture (some (range "09"))) (position)) ,make-number))
+     :string-escape (sequence "\\" 1)
+     :string-part (choice :string-escape (sequence (not `"`) 1))
+     :string-literal (cmt (sequence (position) (capture (sequence `"` (any :string-part) `"`)) (position)) ,make-string-literal)
+     :number (cmt (sequence (position) (capture (some (range "09"))) (position)) ,make-number)
      :token (sequence :ws (choice
                             :lbrack :rbrack
                             :lparen :rparen
                             :lbrace :rbrace
                             :->
                             :+ :- :* :/ :=
+                            :&
                             :colon :semicolon :comma
                             :ident-or-kw
-                            :number))
+                            :number
+                            :string-literal))
      :main (any (sequence :ws 
                   (choice 
                     :token
