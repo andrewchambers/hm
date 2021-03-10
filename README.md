@@ -5,7 +5,7 @@ adds a few features and removes most others.
 
 Initial plan:
 
-- C like semantics (compile to C perhaps?).
+- C like semantics, compile to C initially.
 - Function local type inference.
 - Simplicity.
 
