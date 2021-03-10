@@ -302,8 +302,9 @@
       :lparen
       (do
         (next)
-        (parse-expr)
-        (expect :rparen))
+        (def expr (parse-expr))
+        (expect :rparen)
+        expr)
       :*
       (do 
         (next)

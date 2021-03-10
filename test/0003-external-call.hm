@@ -1,0 +1,7 @@
+
+fn puts(s: *char) -> void;
+
+fn main () -> int {
+	puts("hello");
+	0
+}

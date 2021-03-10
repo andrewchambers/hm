@@ -60,8 +60,31 @@
         (type-equations p eqns)))
     (= (node :kind) :binop)
     (do
-      (array/push eqns [(get-in node [:left-expr :type]) (node :type)])
-      (array/push eqns [(get-in node [:right-expr :type]) (node :type)])
+      (tracev node)
+      (def left-type (get-in node [:left-expr :type]))
+      (def right-type (get-in node [:right-expr :type]))
+      (cond
+        (= (node :op) :+)
+        (do
+          (eprintf "%.20m" node)
+          (when (= (get left-type :kind) :ptr)
+            (array/push eqns [left-type (node :type)]))
+          (when (= (get right-type :kind) :ptr)
+            (array/push eqns [right-type (node :type)]))
+          (when (not (symbol? (node :type)))
+            (if (= (get-in node [:type :kind]) :ptr)
+              (do
+                (when (and (not (symbol? left-type)) (not= (get left-type :kind) :ptr))
+                  (array/push eqns [right-type (node :type)]))
+                (when (and (not (symbol? right-type)) (not= (get right-type :kind) :ptr))
+                  (array/push eqns [left-type (node :type)])))
+              (do
+                (array/push eqns [left-type (node :type)])
+                (array/push eqns [right-type (node :type)])))))
+        :default
+        (do
+          (array/push eqns [left-type (node :type)])
+          (array/push eqns [right-type (node :type)])))
       (type-equations (node :left-expr) eqns)
       (type-equations (node :right-expr) eqns)))
   eqns)
@@ -117,8 +140,7 @@
 
 (defn apply-types
   [solved-types node]
-  (tracev node)
-  
+
   (each k [:type :return-type :var-type]
     (when-let [t (node k)]
       (def new-t (prewalk |(get solved-types $ $) t))
@@ -156,8 +178,15 @@
 
 (defn type-check-expr
   [node]
-  (def eqns (tracev (type-equations node)))
-  (def solved-types (tracev (solve-type-equations eqns)))
+  (var solved-types nil)
+  (while true
+    (def eqns (tracev (type-equations node)))
+    (def new-solved-types (tracev (solve-type-equations eqns)))
+    (when (= solved-types new-solved-types)
+      (break))
+    (set solved-types new-solved-types)
+    (eprintf "%.m20" solved-types)
+    (apply-types solved-types node))
   (apply-types solved-types node)
   (validate-expr-types node)
   node)
