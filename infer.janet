@@ -187,7 +187,6 @@
     (set solved-types new-solved-types)
     (eprintf "%.m20" solved-types)
     (apply-types solved-types node))
-  (apply-types solved-types node)
   (validate-expr-types node)
   node)
 
