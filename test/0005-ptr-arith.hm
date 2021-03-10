@@ -22,7 +22,7 @@ fn f3() -> void {
 fn f4() -> void {
 	let s = "xhello";
 	let offset = 1;
-	// Won't compile without hints as
+	// Won't compile without at least one hint as
 	// we cannot infer which constant is the
 	// the pointer and which is the number...
 	puts(s:*char + offset:size);
@@ -34,5 +34,5 @@ fn main () -> int {
 	f2();
 	f3();
 	f4();
-	0
+	-> 0
 }
