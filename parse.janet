@@ -107,6 +107,14 @@
     (parse-fn-type)
     (= (tok :kind) :struct)
     (parse-struct-type)
+    (= (tok :kind) :lbrack)
+    (do 
+      (next)
+      (def sz ((expect :number) :text))
+      (expect :semicolon)
+      (def sub-type (parse-type))
+      (expect :rbrack)
+      {:kind :array :size sz :sub-type sub-type})
     (= (tok :kind) :*)
     (do
       (next)

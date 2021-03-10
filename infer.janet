@@ -47,7 +47,13 @@
       (type-equations (node :expr) eqns))
     (= (node :kind) :index)
     (do
-      (array/push eqns [(get-in node [:expr :type])  {:kind :ptr :sub-type (node :type)}])
+      (cond
+        (= (get-in node [:expr :type :kind]) :ptr)
+        (array/push eqns [(get-in node [:expr :type])
+                          {:kind :ptr :sub-type (node :type)}])
+        (= (get-in node [:expr :type :kind]) :array)
+        (array/push eqns [(get-in node [:expr :type]) 
+                          {:kind :array :size (get-in node [:expr :type :size]) :sub-type (node :type)}]))
       (array/push eqns [(get-in node [:index-expr :type]) "usize"])
       (type-equations (node :expr) eqns)
       (type-equations (node :index-expr) eqns))
@@ -68,8 +74,6 @@
         (type-equations p eqns)))
     (= (node :kind) :binop)
     (do
-      (eprintf "XXX %.20m" node)
-      (eprintf "XXX %.20m" eqns)
       (def left-type (get-in node [:left-expr :type]))
       (def right-type (get-in node [:right-expr :type]))
       (cond
@@ -102,7 +106,9 @@
       (type-equations (node :right-expr) eqns))
     (= (node :kind) :=)
     (do
-      (array/push eqns [(get-in node [:left-expr :type]) (get-in node [:right-expr :type])])))
+      (array/push eqns [(get-in node [:left-expr :type]) (get-in node [:right-expr :type])])
+      (type-equations (node :left-expr) eqns)
+      (type-equations (node :right-expr) eqns)))
   eqns)
 
 (defn solve-type-equations
@@ -141,6 +147,8 @@
     :default
     (case (get t :kind)
       :ptr
+      (concrete-type? (t :sub-type))
+      :array
       (concrete-type? (t :sub-type))
       :fn
       (and (concrete-type? (t :return-type))

@@ -23,5 +23,6 @@
 
 (each t tests
   (prin t "...")
+  (file/flush stdout)
   (run-test t)
   (print " ok"))

@@ -1,0 +1,6 @@
+      
+fn main () -> int {
+	let x: [16; int];
+	x[5] = 2;
+	0
+}

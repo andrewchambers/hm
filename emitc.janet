@@ -1,36 +1,55 @@
 (import ./types)
 
 (defn emit-type
-  [t]
+  [t &opt name accum]
+  (default accum @[])
+
+  (defn format-accumulated
+    [name accum]
+    (var s name)
+    (while (not (empty? accum))
+      (match (array/pop accum)
+        :ptr
+        (set s (string "(*" s ")"))
+        [:array size]
+        (set s (string "(" s "[" size "])"))))
+    s)
+
   (cond
     (string? t)
-    (prinf "%s" t)
+    (do 
+      (prin t " ")
+      (prin (format-accumulated name accum)))
     (struct? t)
     (case (t :kind)
       :ptr
       (do
-        (emit-type (t :sub-type))
-        (prin "*"))
+        (array/push accum :ptr)
+        (emit-type (t :sub-type) name accum))
+      :array
+      (do
+        (array/push accum [:array (t :size)])
+        (emit-type (t :sub-type) name accum))
       :struct
       (do
         (prin "struct {")
-        (each [name field-type] (t :fields)
-          (prinf " %s " name)
-          (emit-type field-type)
+        (each [field-name field-type] (t :fields)
+          (emit-type field-type field-name)
           (prin "; "))
-        (prin "}")))))
+        (prin "} ")
+        (prin (format-accumulated name accum))))))
 
 (defn emit-types
   [type-tab]
   (each type-name (types/sort type-tab)
     (def t (type-tab type-name))
     (if (table? t) # Don't emit primitive types.
-      (unless (= (t :crepr) type-name)
-        (printf "typedef %s %s;" (t :crepr) type-name))
+      (unless (= (t :c-repr) type-name)
+        (printf "typedef %s %s;" (t :c-repr) type-name))
       (do
         (prin "typedef ")
-        (emit-type t)
-        (printf " %s;" type-name)))))
+        (emit-type t type-name)
+        (prin ";\n")))))
 
 (defn emit-decl
   [decl]
@@ -39,9 +58,8 @@
   (case (decl-type :kind)
     :fn
     (do
-      (emit-type (decl-type :return-type))
-      (prin " ")
-      (prin decl-name)
+      (tracev decl-name)
+      (emit-type (decl-type :return-type) decl-name)
       (prin "(")
       (if (empty? (decl-type :param-types))
         (prin "void")
@@ -70,9 +88,8 @@
       (prin "))"))
     :let
     (do
-      (emit-type (e :var-type))
+      (emit-type (e :var-type) (e :name))
       (prin " ")
-      (prin (e :name))
       (when-let [init-expr (e :expr)]
         (prin "=")
         (emit-expr init-expr)))
@@ -170,9 +187,7 @@
 (defn emit-fn
   [f]
   (def fn-type (f :type))
-  (emit-type (fn-type :return-type))
-  (prin " ")
-  (prin (f :name))
+  (emit-type (fn-type :return-type) (f :name))
   (prin "(")
   (if (empty? (f :param-names))
     (prin "void")

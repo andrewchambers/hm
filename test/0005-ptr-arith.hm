@@ -28,7 +28,6 @@ fn f4() -> void {
 	puts(s:*char + offset:size);
 }
 
-
 fn main () -> int {
 	f1();
 	f2();
