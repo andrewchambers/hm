@@ -3,5 +3,6 @@ fn puts(s: *char) -> void;
 
 fn main () -> int {
 	puts("xhello"+1:int);
+	puts(1:int+"xhello");
 	0
 }

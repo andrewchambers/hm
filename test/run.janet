@@ -11,9 +11,9 @@
   (sh/$ cc ,cfile -o ,exe)
   (spit stdout-path (sh/$< ,exe))
   (if (os/stat expected-stdout-path)
-  	(sh/$ diff ,stdout-path ,expected-stdout-path)
-  	(unless (empty? (slurp stdout-path))
-  		(error "unexpected test output"))))
+    (sh/$ diff -u ,stdout-path ,expected-stdout-path)
+    (unless (empty? (slurp stdout-path))
+      (error "unexpected test output"))))
 
 (def tests
   (->> (os/dir "test")
