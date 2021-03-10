@@ -83,6 +83,12 @@
     (do
       (prin "*")
       (emit-expr (e :expr)))
+    :index
+    (do
+      (emit-expr (e :expr))
+      (prin "[")
+      (emit-expr (e :index-expr))
+      (prin "]"))
     :number
     (do
       (prin "(")

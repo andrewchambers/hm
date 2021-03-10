@@ -320,7 +320,7 @@
         @{:kind :&
           :expr expr
           :type (fresh-type-var)
-          :no-return (expr :no-return)})  
+          :no-return (expr :no-return)})
       :string-literal
       (do 
         (next)
@@ -349,6 +349,17 @@
   (while true
     (def next-kind ((peek) :kind))
     (cond
+      (= next-kind :lbrack)
+      (do
+        (next)
+        (def index-expr (parse-expr))
+        (expect :rbrack)
+        (set expr
+          @{:kind :index
+            :expr expr
+            :index-expr index-expr
+            :type (fresh-type-var)
+            :no-return (or (expr :no-return) (index-expr :no-return))}))
       (= next-kind :lparen)
       (do
         (next)

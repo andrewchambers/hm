@@ -45,6 +45,11 @@
     (do
       (array/push eqns [(get-in node [:expr :type])  {:kind :ptr :sub-type (node :type)}])
       (type-equations (node :expr) eqns))
+    (= (node :kind) :index)
+    (do
+      (array/push eqns [(get-in node [:expr :type])  {:kind :ptr :sub-type (node :type)}])
+      (type-equations (node :expr) eqns)
+      (type-equations (node :index-expr) eqns))
     (= (node :kind) :type-assert)
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :type)])
@@ -146,7 +151,7 @@
       (def new-t (prewalk |(get solved-types $ $) t))
       (put node k new-t)))
 
-  (each k [:expr :body :if-true :if-false :left-expr :right-expr]
+  (each k [:expr :body :if-true :if-false :left-expr :right-expr :index-expr]
     (when-let [sub-expr (node k)]
       (apply-types solved-types sub-expr)))
 
@@ -167,7 +172,7 @@
     (unless (numeric-type? (node :type))
       (errorf "number resolved to non numeric type - %p" (node :type))))
   
-  (each k [:expr :body :if-true :if-false :left-expr :right-expr]
+  (each k [:expr :body :if-true :if-false :left-expr :right-expr :index-expr]
     (when-let [sub-expr (node k)]
       (validate-expr-types sub-expr)))
 

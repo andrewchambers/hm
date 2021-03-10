@@ -13,7 +13,7 @@ Initial plan:
 
 ```
 
-puts(s: *char, ...) -> void;
+puts(s: *char) -> void;
 
 fn main (argc: int, argv: **char) -> int {
   puts("hello!");
