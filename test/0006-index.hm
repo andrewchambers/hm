@@ -2,6 +2,6 @@
 fn main() -> int {
 	let x = 0;
 	let y = &x;
-	let z = y[(0:int)];
+	let z = y[0];
 	z
 }

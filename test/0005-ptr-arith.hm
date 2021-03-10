@@ -2,7 +2,9 @@
 fn puts(s: *char) -> void;
 
 fn main () -> int {
-	puts("xhello"+1:int);
-	puts(1:int+"xhello");
+	puts("xhello"+1:size);
+	puts(1:size+"xhello");
+	puts("xhello":*char+1);
+	puts(1+"xhello":*char);
 	0
 }

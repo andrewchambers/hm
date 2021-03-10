@@ -11,7 +11,8 @@
    ":" ";" ","
    "&"])
 
-(def- keywords ["fn" "let" "type" "struct" "if" "else" "while" "true" "false"])
+(def- keywords 
+  ["as" "fn" "let" "type" "struct" "if" "else" "while" "true" "false"])
 
 (def- keyword-tab
   (let [t @{}]

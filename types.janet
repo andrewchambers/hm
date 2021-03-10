@@ -2,9 +2,11 @@
 
 # wrapped in @{} to make them comparable by identity.
 (def builtins {
-  "void" @{:name "void"}
-  "char" @{:name "char"}
-  "int" @{:name "int"}
+  "void" @{:name "void" :crepr "void"}
+  "char" @{:name "char" :crepr "char"}
+  "int" @{:name "int" :crepr "int"}
+  "size" @{:name "size" :crepr "long long"}
+  "usize" @{:name "usize" :crepr "unsigned long long"}
   "bool" "char"
 })
 

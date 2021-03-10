@@ -383,6 +383,14 @@
             :type (parse-type) 
             :expr expr
             :no-return (expr :no-return)}))
+      (= next-kind :as)
+      (do
+        (next) 
+        (set expr
+          @{:kind :type-cast
+            :type (parse-type) 
+            :expr expr
+            :no-return (expr :no-return)}))
       (break)))
   expr)
 
@@ -392,6 +400,17 @@
   (while true
     (def next-kind ((peek) :kind))
     (cond
+      (=  next-kind :=)
+      (do
+        (next)
+        (def r (parse-expr))
+        (set l
+          @{:kind :=
+            :type "void"
+            :left-expr l
+            :right-expr r
+            :no-return (or (l :no-return) (r :no-return))})
+        (break))
       (index-of next-kind [:+ :- :* :/])
       (do
         (next)

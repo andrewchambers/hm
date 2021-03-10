@@ -24,10 +24,13 @@
   [type-tab]
   (each type-name (types/sort type-tab)
     (def t (type-tab type-name))
-    (unless (table? t) # Don't emit primitive types.
-      (prinf "typedef ")
-      (emit-type t)
-      (prinf " %s;\n" type-name))))
+    (if (table? t) # Don't emit primitive types.
+      (unless (= (t :crepr) type-name)
+        (printf "typedef %s %s;" (t :crepr) type-name))
+      (do
+        (prin "typedef ")
+        (emit-type t)
+        (printf " %s;" type-name)))))
 
 (defn emit-decl
   [decl]
@@ -58,6 +61,13 @@
   (case (e :kind)
     :type-assert
     (emit-expr (e :expr))
+    :type-cast
+    (do
+      (prin "((")
+      (emit-type (e :type))
+      (prin ")(")
+      (emit-expr (e :expr))
+      (prin "))"))
     :let
     (do
       (emit-type (e :var-type))
@@ -147,6 +157,13 @@
       (prin "(")
       (emit-expr (e :left-expr))
       (prin (string (e :op)))
+      (emit-expr (e :right-expr))
+      (prin ")"))
+    :=
+    (do
+      (prin "(")
+      (emit-expr (e :left-expr))
+      (prin "=")
       (emit-expr (e :right-expr))
       (prin ")"))))
 

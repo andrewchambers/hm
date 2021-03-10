@@ -48,12 +48,15 @@
     (= (node :kind) :index)
     (do
       (array/push eqns [(get-in node [:expr :type])  {:kind :ptr :sub-type (node :type)}])
+      (array/push eqns [(get-in node [:index-expr :type]) "usize"])
       (type-equations (node :expr) eqns)
       (type-equations (node :index-expr) eqns))
     (= (node :kind) :type-assert)
     (do
       (array/push eqns [(get-in node [:expr :type]) (node :type)])
       (type-equations (node :expr) eqns))
+    (= (node :kind) :type-cast)
+    (type-equations (node :expr) eqns)
     (= (node :kind) :call)
     (do
       (array/push eqns [{:kind :fn
@@ -65,13 +68,13 @@
         (type-equations p eqns)))
     (= (node :kind) :binop)
     (do
-      (tracev node)
+      (eprintf "XXX %.20m" node)
+      (eprintf "XXX %.20m" eqns)
       (def left-type (get-in node [:left-expr :type]))
       (def right-type (get-in node [:right-expr :type]))
       (cond
         (= (node :op) :+)
         (do
-          (eprintf "%.20m" node)
           (when (= (get left-type :kind) :ptr)
             (array/push eqns [left-type (node :type)]))
           (when (= (get right-type :kind) :ptr)
@@ -79,9 +82,14 @@
           (when (not (symbol? (node :type)))
             (if (= (get-in node [:type :kind]) :ptr)
               (do
-                (when (and (not (symbol? left-type)) (not= (get left-type :kind) :ptr))
+                (when (= (get left-type :kind) :ptr)
+                  (array/push eqns [right-type "size"]))
+                (when (= left-type "size")
                   (array/push eqns [right-type (node :type)]))
-                (when (and (not (symbol? right-type)) (not= (get right-type :kind) :ptr))
+                
+                (when (= (get right-type :kind) :ptr)
+                  (array/push eqns [left-type "size"]))
+                (when (= right-type "size")
                   (array/push eqns [left-type (node :type)])))
               (do
                 (array/push eqns [left-type (node :type)])
@@ -91,14 +99,17 @@
           (array/push eqns [left-type (node :type)])
           (array/push eqns [right-type (node :type)])))
       (type-equations (node :left-expr) eqns)
-      (type-equations (node :right-expr) eqns)))
+      (type-equations (node :right-expr) eqns))
+    (= (node :kind) :=)
+    (do
+      (array/push eqns [(get-in node [:left-expr :type]) (get-in node [:right-expr :type])])))
   eqns)
 
 (defn solve-type-equations
   [eqns]
   (var subst {})
   (each [l r] eqns
-    (tracev [l r subst])
+    (eprintf "%.20m" [l r subst])
     (set subst (unify/unify l r subst))
     (unless subst
       (errorf "type inference failed")))
@@ -141,6 +152,8 @@
   (case t
     "char" true
     "int" true
+    "usize" true
+    "size" true
     false))
 
 (defn apply-types
@@ -186,7 +199,7 @@
   (var solved-types nil)
   (while true
     (def eqns (tracev (type-equations node)))
-    (def new-solved-types (tracev (solve-type-equations eqns)))
+    (def new-solved-types (solve-type-equations eqns))
     (when (= solved-types new-solved-types)
       (break))
     (set solved-types new-solved-types)
