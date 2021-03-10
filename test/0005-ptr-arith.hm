@@ -1,10 +1,38 @@
 
 fn puts(s: *char) -> void;
 
+fn f1() -> void {
+	let s = "xhello";
+	let offset: size = 1;
+	puts(s + offset);
+}
+
+fn f2() -> void {
+	let s: *char = "xhello";
+	let offset = 1;
+	puts(s + offset);
+}
+
+fn f3() -> void {
+	let s: *char = "xhello";
+	let offset: size = 1;
+	puts(s + offset);
+}
+
+fn f4() -> void {
+	let s = "xhello";
+	let offset = 1;
+	// Won't compile without hints as
+	// we cannot infer which constant is the
+	// the pointer and which is the number...
+	puts(s:*char + offset:size);
+}
+
+
 fn main () -> int {
-	puts("xhello"+1:size);
-	puts(1:size+"xhello");
-	puts("xhello":*char+1);
-	puts(1+"xhello":*char);
+	f1();
+	f2();
+	f3();
+	f4();
 	0
 }
